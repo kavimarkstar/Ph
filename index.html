@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Server</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #0d1117; color: #c9d1d9; height: 100vh; display: flex; align-items: center; justify-content: center; font-family: sans-serif; }
+        .main-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 35px; max-width: 400px; width: 90%; text-align: center; }
+        .btn-main { background-color: #238636; color: white; border: none; font-weight: 600; padding: 14px; border-radius: 6px; transition: 0.2s; }
+        .btn-main:hover { background-color: #2ea043; transform: scale(1.02); }
+        .btn-main:disabled { background-color: #21262d; color: #484f58; }
+        .loader { display: none; margin-bottom: 15px; }
+        #errorBox { color: #f85149; font-size: 0.9rem; margin-top: 15px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="main-card shadow-lg">
+    <h3 class="mb-3">Link Ready!</h3>
+    <p class="text-secondary mb-4">පහත බොත්තම එබූ පසු ටැබ් දෙකක් විවෘත වේ.</p>
+    
+    <div id="loader" class="spinner-border text-success loader" role="status"></div>
+
+    <button id="goBtn" class="btn btn-main w-100">WATCH NOW</button>
+
+    <div id="errorBox">වැරදි වීඩියෝ ID එකක් හෝ දත්ත දෝෂයකි!</div>
+</div>
+
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const idFromUrl = urlParams.get('id');
+
+    const btn = document.getElementById('goBtn');
+    const loader = document.getElementById('loader');
+    const errorBox = document.getElementById('errorBox');
+
+    btn.addEventListener('click', async () => {
+        if (!idFromUrl) {
+            alert("ID එකක් නැත!");
+            return;
+        }
+
+        btn.disabled = true;
+        loader.style.display = 'inline-block';
+        errorBox.style.display = 'none';
+
+        try {
+            // JSON ෆයිල් දෙකම Fetch කිරීම
+            const [videoRes, adRes] = await Promise.all([
+                fetch(`./database/${idFromUrl}.json`), 
+                fetch(`./database/ad_config.json`)
+            ]);
+
+            if (!videoRes.ok || !adRes.ok) throw new Error();
+
+            const videoData = await videoRes.json();
+            const adData = await adRes.json();
+
+            // JSON එක ඇතුළේ තියෙන URL එක ගන්නවා (උඹේ අලුත් format එකට අනුව)
+            const finalVideoUrl = videoData.url;
+            const finalAdUrl = adData.direct_link;
+
+            if (finalVideoUrl && finalAdUrl) {
+                // 1. Adsterra Direct Link එක New Tab එකක විවෘත කිරීම
+                window.open(finalAdUrl, '_blank');
+                
+                // 2. වීඩියෝ ලින්ක් එක මේ Tab එකේම Redirect කිරීම
+                setTimeout(() => {
+                    window.location.href = finalVideoUrl;
+                }, 150);
+            } else {
+                throw new Error();
+            }
+
+        } catch (err) {
+            errorBox.style.display = 'block';
+            console.error("Data error");
+        } finally {
+            loader.style.display = 'none';
+            btn.disabled = false;
+        }
+    });
+</script>
+
+</body>
+</html>
